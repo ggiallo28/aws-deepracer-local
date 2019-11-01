@@ -37,4 +37,5 @@ ehthumbs.db
 Thumbs.db
 
 robo/container/**
+robomaker.env
 
