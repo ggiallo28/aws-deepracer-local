@@ -1,0 +1,9 @@
+---
+VIRTUALENV_PATH: ~/.virtualenvs/deepracer_local
+# Volume to be used for MinIO server.
+MINIO_VOLUMES: /data
+## Access Key of the server.
+MINIO_ACCESS_KEY: minio
+## Secret key of the server.
+MINIO_SECRET_KEY: miniokey
+#

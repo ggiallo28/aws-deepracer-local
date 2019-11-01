@@ -1,0 +1,108 @@
+---
+- hosts: localhost
+  strategy: free
+  tasks:
+
+    - name: Include variables
+      include_vars: ../vars/vars.yml
+
+    - name: Update submodules
+      shell: git pull --recurse-submodules
+
+    - name: Install requirements
+      pip:
+        name: 
+          - "{{ playbook_dir }}/../source/sagemaker-python-sdk/"
+          - pandas 
+          - urllib3==1.24.3
+          - PyYAML==3.13
+          - ipython
+          - docker
+        virtualenv: "{{ VIRTUALENV_PATH }}"
+        virtualenv_python: python3
+
+    - name: Enable virtualenv
+      set_fact:
+        ansible_python_interpreter: "{{ VIRTUALENV_PATH }}/bin/python"
+
+    - name: Pull images
+      docker_image:
+        name: "{{ item }}"
+        source: pull
+      with_items:
+        - crr0004/sagemaker-rl-tensorflow:console
+        - crr0004/deepracer_robomaker:console
+        - minio/minio
+
+    - name: Creates data directory
+      file:
+        path: "{{ VIRTUALENV_PATH }}{{ MINIO_VOLUMES }}"
+        state: directory
+
+    - name: Create minio container
+      docker_container:
+        name: minio
+        image: minio/minio
+        command: server /data
+        state: started
+        volumes:
+          - "{{ VIRTUALENV_PATH }}{{ MINIO_VOLUMES }}:{{ MINIO_VOLUMES }}"
+        ports:
+          - "9000:9000"
+        env:
+          MINIO_VOLUMES: "{{ MINIO_VOLUMES }}"
+          MINIO_ACCESS_KEY: "{{ MINIO_ACCESS_KEY }}"
+          MINIO_SECRET_KEY: "{{ MINIO_SECRET_KEY }}"
+        healthcheck:
+          test:  ["CMD", "curl", "--fail", "http://localhost:9000/minio/health/live"]
+          interval: 1m30s
+          timeout: 10s
+          retries: 3
+          start_period: 30s
+
+
+    - name: Creates sagemaker directory
+      file:
+        path: ~/.sagemaker
+        state: directory
+
+    - name: Copy sagemaker configuration
+      copy:
+        src: "{{ playbook_dir }}/../source/config.yaml"
+        dest: ~/.sagemaker/config.yaml
+
+    - name: Create s3 bucket
+      s3_bucket:
+        name: bucket
+        s3_url: http://127.0.0.1:9000
+
+    - name: List custom files
+      find:
+        paths: "{{ playbook_dir }}/../source/custom_files"
+        recurse: yes
+      register: list_custom_files
+
+    - debug: var="{{ item.path | basename }}"
+      loop: "{{ list_custom_files.files | flatten(1) }}"
+        
+
+    - name: Upload custom files in S3
+      aws_s3:
+        bucket: bucket
+        object: "custom_files/{{ item.path | basename }}"
+        src: "{{ item.path }}"
+        mode: put
+        s3_url: http://127.0.0.1:9000
+      loop: "{{ list_custom_files.files | flatten(1) }}"
+
+
+
+
+
+
+ 
+
+
+
+
+

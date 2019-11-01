@@ -1,0 +1,4 @@
+# Community or custom git submodules
+[submodule "source"]
+	path = source
+	url = https://github.com/crr0004/deepracer.git

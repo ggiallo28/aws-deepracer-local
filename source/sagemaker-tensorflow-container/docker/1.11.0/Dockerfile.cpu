@@ -1,0 +1,54 @@
+FROM ubuntu:16.04
+
+LABEL maintainer="Amazon AI"
+
+ARG framework_support_installable=sagemaker_tensorflow_container-2.0.0.tar.gz
+
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa -y \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    build-essential \
+    curl \
+    nginx \
+	python3.6-dev \
+	python3-setuptools \ 
+    && rm -rf /var/lib/apt/lists/*
+
+# Python won’t try to write .pyc or .pyo files on the import of source modules
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+
+RUN curl -fSsL -O https://bootstrap.pypa.io/get-pip.py && \
+    python3.6 get-pip.py \
+		    --disable-pip-version-check \
+		    --no-cache-dir \
+		    "pip>=18.1" \
+	; \
+    rm get-pip.py
+
+# Set environment variables for MKL
+# TODO: investigate the right value for OMP_NUM_THREADS
+# For more about MKL with TensorFlow see:
+# https://www.tensorflow.org/performance/performance_guide#tensorflow_with_intel%C2%AE_mkl_dnn
+ENV KMP_AFFINITY=granularity=fine,compact,1,0 KMP_BLOCKTIME=1 KMP_SETTINGS=0
+
+WORKDIR /
+
+COPY $framework_support_installable .
+
+RUN pip3.6 install --no-cache-dir -U \
+    keras==2.2.4 \
+    $framework_support_installable \
+    "sagemaker-tensorflow>=1.11,<1.12" \
+    # Let's install TensorFlow separately in the end to avoid
+    # the library version to be overwritten
+    && pip3.6 install --force-reinstall --no-cache-dir -U tensorflow==1.11.0 \
+    \
+    && rm -f $framework_support_installable \
+    && pip3.6 uninstall -y --no-cache-dir \
+    markdown \
+    tensorboard
+
+ENV SAGEMAKER_TRAINING_MODULE sagemaker_tensorflow_container.training:main

@@ -1,0 +1,31 @@
+FROM crr0004/sagemaker-rl-tensorflow:coach0.11-cpu-py3
+EXPOSE 6379
+EXPOSE 5800
+EXPOSE 6006
+
+
+COPY lib/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+WORKDIR /opt/ml
+
+ARG sagemaker_container
+ARG intel_coach
+
+RUN test $sagemaker_container || exit 1
+RUN echo $sagemaker_container
+COPY $sagemaker_container .
+COPY $intel_coach .
+RUN pip install -U --no-cache-dir $intel_coach $sagemaker_container 
+#"tensorboard<1.12.0,>=1.11.0"
+RUN rm $sagemaker_container
+RUN rm $intel_coach
+
+RUN apt-get update && apt-get install jwm x11vnc -y
+
+RUN pip install --no-cache-dir rospkg rospkg-modules
+
+# Starts framework
+ENTRYPOINT ["/bin/bash", "-c", "start.sh train"]
+#ENTRYPOINT ["/bin/bash", "-m", "start.sh"]
+CMD ["start.sh", "train"]
