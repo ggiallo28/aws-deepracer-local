@@ -7,7 +7,7 @@
       include_vars: ../vars/vars.yml
 
     - name: Update submodules
-      shell: git pull --recurse-submodules
+      shell: git submodule update --recursive --remote
 
     - name: Install requirements
       pip:
@@ -17,7 +17,8 @@
           - urllib3==1.24.3
           - PyYAML==3.13
           - ipython
-          - docker
+          - docker==3.7.0
+          - paramiko>=2.4.2
         virtualenv: "{{ VIRTUALENV_PATH }}"
         virtualenv_python: python3
 
@@ -72,28 +73,44 @@
         dest: ~/.sagemaker/config.yaml
 
     - name: Create s3 bucket
-      s3_bucket:
-        name: bucket
+      aws_s3:
+        aws_access_key: "{{ MINIO_ACCESS_KEY }}"
+        aws_secret_key: "{{ MINIO_SECRET_KEY }}"
+        bucket: bucket
+        mode: create
+        permission: []
         s3_url: http://127.0.0.1:9000
 
     - name: List custom files
       find:
         paths: "{{ playbook_dir }}/../source/custom_files"
         recurse: yes
-      register: list_custom_files
-
-    - debug: var="{{ item.path | basename }}"
-      loop: "{{ list_custom_files.files | flatten(1) }}"
-        
+      register: list_custom_files   
 
     - name: Upload custom files in S3
       aws_s3:
+        aws_access_key: "{{ MINIO_ACCESS_KEY }}"
+        aws_secret_key: "{{ MINIO_SECRET_KEY }}"
         bucket: bucket
         object: "custom_files/{{ item.path | basename }}"
         src: "{{ item.path }}"
         mode: put
+        rgw: yes
+        encrypt: no
+        permission: []
         s3_url: http://127.0.0.1:9000
       loop: "{{ list_custom_files.files | flatten(1) }}"
+
+    - name: Creates robomaker directory
+      file:
+        path: "{{ playbook_dir }}/../robo"
+        state: directory
+    - name: Creates robomaker directory
+      file:
+        path: "{{ playbook_dir }}/../robo/container"
+        state: directory
+
+
 
 
 
