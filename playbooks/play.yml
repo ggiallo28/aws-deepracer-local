@@ -69,7 +69,7 @@
 
     - name: Copy sagemaker configuration
       copy:
-        src: "{{ playbook_dir }}/../source/config.yaml"
+        src: "{{ playbook_dir }}/../config.yaml"
         dest: ~/.sagemaker/config.yaml
 
     - name: Create s3 bucket
