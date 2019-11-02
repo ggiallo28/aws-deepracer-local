@@ -12,7 +12,7 @@
           - "{{ playbook_dir }}/../source/sagemaker-python-sdk/"
           - pandas 
           - urllib3==1.24.3
-          - PyYAML==3.13
+          - PyYAML
           - ipython
           - docker==3.7.0
           - paramiko>=2.4.2
