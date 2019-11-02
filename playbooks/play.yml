@@ -121,8 +121,10 @@
       docker_container:
         name: dr
         image: crr0004/deepracer_robomaker:console
-        command: "\"./run.sh\ build\ distributed_training.launch\""
+        command: "\"rm\ -rf\ /root/.ros/log &&\ ./run.sh\ build\ distributed_training.launch\""
         state: present
+        restart: yes
+        restart_policy: always
         volumes:
           - "{{ VIRTUALENV_PATH }}{{ MINIO_VOLUMES }}/{{ S3_BUCKET }}/robo_checkpoint:/root/.ros/"
         ports:
@@ -160,10 +162,15 @@
             aliases:
               - robomaker
         purge_networks: yes
+        healthcheck:
+          test: ["CMD", "bash -c 'grep -rnw /root/.ros/log -e Traceback > /dev/null && exit 1 || exit 0'"]
+          #test: ["CMD", "/bin/bash", if [ $(grep -rnw '/root/.ros/log' -e 'Traceback' | wc -c) -gt 0 ];", "then exit 1", "else exit 0", "fi"]
+          interval: 30s
+          timeout: 10s
+          retries: 3
+          start_period: 30s
 
 
-
- 
 
 
 
