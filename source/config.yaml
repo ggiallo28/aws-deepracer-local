@@ -1,2 +1,2 @@
 local:
-    container_root: "../../robo/container"
+    container_root: "robo/container"

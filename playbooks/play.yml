@@ -6,9 +6,6 @@
     - name: Include variables
       include_vars: ../vars/vars.yml
 
-    - name: Update submodules
-      shell: git submodule update --recursive --remote
-
     - name: Install requirements
       pip:
         name: 
@@ -19,6 +16,7 @@
           - ipython
           - docker==3.7.0
           - paramiko>=2.4.2
+          - docker-compose>=1.7.0
         virtualenv: "{{ VIRTUALENV_PATH }}"
         virtualenv_python: python3
 
@@ -38,13 +36,13 @@
     - name: Creates data directory
       file:
         path: "{{ VIRTUALENV_PATH }}{{ MINIO_VOLUMES }}"
-        state: directory
+        state: directory            
 
     - name: Create minio container
       docker_container:
         name: minio
         image: minio/minio
-        command: server /data
+        command: server "{{ MINIO_VOLUMES }}"
         state: started
         volumes:
           - "{{ VIRTUALENV_PATH }}{{ MINIO_VOLUMES }}:{{ MINIO_VOLUMES }}"
@@ -60,7 +58,12 @@
           timeout: 10s
           retries: 3
           start_period: 30s
-
+        networks:
+          - name: sagemaker-local
+            ipv4_address: "172.20.0.2"
+            aliases:
+              - minio
+        purge_networks: yes
 
     - name: Creates sagemaker directory
       file:
@@ -69,14 +72,14 @@
 
     - name: Copy sagemaker configuration
       copy:
-        src: "{{ playbook_dir }}/../config.yaml"
+        src: "{{ playbook_dir }}/../source/config.yaml"
         dest: ~/.sagemaker/config.yaml
 
     - name: Create s3 bucket
       aws_s3:
         aws_access_key: "{{ MINIO_ACCESS_KEY }}"
         aws_secret_key: "{{ MINIO_SECRET_KEY }}"
-        bucket: bucket
+        bucket: "{{ S3_BUCKET }}"
         mode: create
         permission: []
         s3_url: http://127.0.0.1:9000
@@ -105,15 +108,58 @@
       file:
         path: "{{ playbook_dir }}/../robo"
         state: directory
-    - name: Creates robomaker directory
+    - name: Creates container directory
       file:
         path: "{{ playbook_dir }}/../robo/container"
         state: directory
+    - name: Creates robo_checkpoint directory
+      file:
+        path: "{{ VIRTUALENV_PATH }}{{ MINIO_VOLUMES }}/{{ S3_BUCKET }}/robo_checkpoint"
+        state: directory
 
-
-
-
-
+    - name: Create robomaker container
+      docker_container:
+        name: dr
+        image: crr0004/deepracer_robomaker:console
+        command: "\"./run.sh\ build\ distributed_training.launch\""
+        state: present
+        volumes:
+          - "{{ VIRTUALENV_PATH }}{{ MINIO_VOLUMES }}/{{ S3_BUCKET }}/robo_checkpoint:/root/.ros/"
+        ports:
+          - "8080:5900"
+        env:
+          WORLD_NAME: "{{ WORLD_NAME }}"
+          LOCAL: "True"
+          AWS_ACCESS_KEY_ID: "{{ MINIO_ACCESS_KEY }}"
+          AWS_SECRET_ACCESS_KEY: "{{ MINIO_SECRET_KEY }}"
+          ROS_AWS_REGION: "{{ REGION }}"
+          AWS_REGION: "{{ REGION }}"
+          MODEL_S3_PREFIX: "{{ S3_PREFIX }}"
+          MODEL_S3_BUCKET: "{{ S3_BUCKET }}"
+          SAGEMAKER_SHARED_S3_PREFIX: "{{ S3_PREFIX }}"
+          SAGEMAKER_SHARED_S3_BUCKET: "{{ S3_BUCKET }}"
+          APP_REGION: "{{ REGION }}"
+          METRICS_S3_BUCKET: "{{ S3_BUCKET }}"
+          TRAINING_JOB_ARN: "{{ JOB_PREFIX }}"
+          ROBOMAKER_SIMULATION_JOB_ACCOUNT_ID: "{{ JOB_PREFIX }}"
+          AWS_ROBOMAKER_SIMULATION_JOB_ID: "{{ JOB_PREFIX }}"
+          S3_ENDPOINT_URL: http://172.20.0.2:9000
+          MARKOV_PRESET_FILE: "{{ MARKOV_PRESET_FILE }}"
+          XAUTHORITY: "{{ XAUTHORITY }}"
+          DISPLAY_N: "{{ DISPLAY_N }}"
+          METRIC_NAME: "{{ METRIC_NAME }}"
+          METRIC_NAMESPACE: "{{ METRIC_NAMESPACE }}"
+          METRICS_S3_OBJECT_KEY: "{{ METRICS_S3_OBJECT_KEY }}"
+          TARGET_REWARD_SCORE: "{{ TARGET_REWARD_SCORE }}"
+          NUMBER_OF_EPISODES: "{{ NUMBER_OF_EPISODES }}"
+          MODEL_METADATA_FILE_S3_KEY: "{{ MODEL_METADATA_FILE_S3_KEY }}"
+          REWARD_FILE_S3_KEY: "{{ REWARD_FILE_S3_KEY }}"
+          BUNDLE_CURRENT_PREFIX: "{{ BUNDLE_CURRENT_PREFIX }}"
+        networks:
+          - name: sagemaker-local
+            aliases:
+              - robomaker
+        purge_networks: yes
 
 
 

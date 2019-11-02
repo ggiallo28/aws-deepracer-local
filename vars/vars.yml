@@ -6,4 +6,30 @@ MINIO_VOLUMES: /data
 MINIO_ACCESS_KEY: minio
 ## Secret key of the server.
 MINIO_SECRET_KEY: miniokey
-#
+# Track List
+# AWS_track.npy 
+# Bowtie_track.npy
+# China_track.npy
+# H_track.npy
+# New_York_Track.npy
+# Oval_track.npy
+# Straight_track.npy
+# Tokyo_Training_track.npy
+# Virtual_May19_Train_track.npy
+# reinvent_base.npy
+WORLD_NAME: reinvent_base
+REGION: us-east-1
+S3_BUCKET: bucket
+S3_PREFIX: rl-deepracer-sagemaker
+JOB_PREFIX: aaa
+MARKOV_PRESET_FILE: deepracer.py          
+XAUTHORITY: /root/.Xauthority
+DISPLAY_N: :0
+METRIC_NAME: reward
+METRIC_NAMESPACE: deepracer
+METRICS_S3_OBJECT_KEY: custom_files/metric.json
+TARGET_REWARD_SCORE: "100000"
+NUMBER_OF_EPISODES: "20000"
+MODEL_METADATA_FILE_S3_KEY: custom_files/model_metadata.json
+REWARD_FILE_S3_KEY: custom_files/reward.py
+BUNDLE_CURRENT_PREFIX: /app/robomaker-deepracer/simulation_ws/
