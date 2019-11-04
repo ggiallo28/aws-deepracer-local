@@ -41,6 +41,7 @@
     - name: Create Network          
       docker_network:
         name: sagemaker-local
+        driver: bridge
         ipam_config:
           - subnet: 172.20.0.0/16
 
