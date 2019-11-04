@@ -41,6 +41,8 @@
     - name: Create Network          
       docker_network:
         name: sagemaker-local
+        ipam_config:
+          - subnet: 172.20.0.0/16
 
     - name: Create minio container
       docker_container:
