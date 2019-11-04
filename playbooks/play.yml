@@ -36,7 +36,11 @@
     - name: Creates data directory
       file:
         path: "{{ VIRTUALENV_PATH }}{{ MINIO_VOLUMES }}"
-        state: directory            
+        state: directory  
+
+    - name: Create Network          
+      docker_network:
+        name: sagemaker-local
 
     - name: Create minio container
       docker_container:
@@ -121,9 +125,9 @@
       docker_container:
         name: dr
         image: crr0004/deepracer_robomaker:console
-        command: "\"rm\ -rf\ /root/.ros/log &&\ ./run.sh\ build\ distributed_training.launch\""
+        #command: "\"rm\ -rf\ /root/.ros/log &&\ ./run.sh\ build\ distributed_training.launch\""
+        command: "\"cp\ ./source/erun.sh\ erun.sh\ &&\ ./erun.sh\ build\ distributed_training.launch\""
         state: present
-        restart: yes
         restart_policy: always
         volumes:
           - "{{ VIRTUALENV_PATH }}{{ MINIO_VOLUMES }}/{{ S3_BUCKET }}/robo_checkpoint:/root/.ros/"
