@@ -86,7 +86,26 @@ def test_horovod_local_mode(sagemaker_local_session, instances, processes, tmpdi
 
 def extract_files(output_path, tmpdir):
     with tarfile.open(os.path.join(output_path, 'model.tar.gz')) as tar:
-        tar.extractall(tmpdir)
+        def is_within_directory(directory, target):
+            
+            abs_directory = os.path.abspath(directory)
+            abs_target = os.path.abspath(target)
+        
+            prefix = os.path.commonprefix([abs_directory, abs_target])
+            
+            return prefix == abs_directory
+        
+        def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+        
+            for member in tar.getmembers():
+                member_path = os.path.join(path, member.name)
+                if not is_within_directory(path, member_path):
+                    raise Exception("Attempted Path Traversal in Tar File")
+        
+            tar.extractall(path, members, numeric_owner=numeric_owner) 
+            
+        
+        safe_extract(tar, tmpdir)
 
 
 def read_json(file, tmp):
@@ -102,4 +121,23 @@ def extract_files_from_s3(s3_url, tmpdir):
     s3.Bucket(parsed_url.netloc).download_file(parsed_url.path.lstrip('/'), model)
 
     with tarfile.open(model, 'r') as tar_file:
-        tar_file.extractall(tmpdir)
+        def is_within_directory(directory, target):
+            
+            abs_directory = os.path.abspath(directory)
+            abs_target = os.path.abspath(target)
+        
+            prefix = os.path.commonprefix([abs_directory, abs_target])
+            
+            return prefix == abs_directory
+        
+        def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+        
+            for member in tar.getmembers():
+                member_path = os.path.join(path, member.name)
+                if not is_within_directory(path, member_path):
+                    raise Exception("Attempted Path Traversal in Tar File")
+        
+            tar.extractall(path, members, numeric_owner=numeric_owner) 
+            
+        
+        safe_extract(tar_file, tmpdir)
